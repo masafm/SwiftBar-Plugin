@@ -50,13 +50,15 @@ EOF
 }
 
 function show_mute_icon() {
-	echo "~~~
+    current_icon="mute"
+    echo "~~~
 :mic.slash.fill: | size=16
 ---
 ミュート解除 | bash='$0' param1=toggle_mute terminal=false"
 }
 
 function show_unmute_icon() {
+    current_icon="unmute"
     echo "~~~
 :mic.fill: | size=16
 ---
@@ -68,15 +70,23 @@ if [ "$1" == "toggle_mute" ];then
     exit
 fi
 
+function get_zoom_pid() {
+    pgrep CptHost
+}
+
+current_icon=""
+show_mute_icon
 while true;do
-    if [ -n "$(pgrep CptHost)" ];then
+    if [ -n "$(get_zoom_pid)" ];then
 	if [ -n "$(is_mute)" ];then
 	    show_mute_icon
 	else
 	    show_unmute_icon
 	fi
     else
-	show_mute_icon
+	if [ $current_icon = "unmute" ];then
+	    show_mute_icon
+	fi
     fi
     sleep 1
 done
