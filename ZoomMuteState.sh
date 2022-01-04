@@ -76,6 +76,7 @@ function get_zoom_pid() {
     pgrep CptHost
 }
 
+trap "exit 0" 15
 current_icon=""
 show_mute_icon
 while true;do
