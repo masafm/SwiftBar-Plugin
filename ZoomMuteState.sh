@@ -10,12 +10,14 @@
 
 function is_mute() {
     /usr/bin/osascript <<EOF
-property btnTitle : "オーディオのミュート解除"
+property menuTitle : "ミーティング"
+property btnEnableMute : "オーディオのミュート"
+property btnDisableMute : "オーディオのミュート解除"
 if application "zoom.us" is running then
     tell application "System Events"
         tell application process "zoom.us"
-            if exists (menu bar item "ミーティング" of menu bar 1) then
-                if exists (menu item btnTitle of menu 1 of menu bar item "ミーティング" of menu bar 1) then
+            if exists (menu bar item menuTitle of menu bar 1) then
+                if exists (menu item btnDisableMute of menu 1 of menu bar item menuTitle of menu bar 1) then
                     return 1
                 end if
             end if
@@ -28,10 +30,19 @@ EOF
 
 function toggle_mute() {
     /usr/bin/osascript <<EOF
+property menuTitle : "ミーティング"
+property btnEnableMute : "オーディオのミュート"
+property btnDisableMute : "オーディオのミュート解除"
 if application "zoom.us" is running then
     tell application "System Events"
         tell application process "zoom.us"
-            keystroke (ASCII character 16)#Press F1 key
+            if exists (menu bar item menuTitle of menu bar 1) then
+                if exists (menu item btnDisableMute of menu 1 of menu bar item menuTitle of menu bar 1) then
+                    click menu item btnDisableMute of menu 1 of menu bar item menuTitle of menu bar 1
+                else
+                    click menu item btnEnableMute of menu 1 of menu bar item menuTitle of menu bar 1
+                end if
+            end if
         end tell
     end tell
 end if
