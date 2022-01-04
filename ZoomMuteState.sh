@@ -78,5 +78,5 @@ while true;do
     else
 	show_mute_icon
     fi
-    sleep 1	
+    sleep 1
 done
