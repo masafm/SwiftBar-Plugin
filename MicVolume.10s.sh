@@ -1,9 +1,9 @@
 #!/bin/bash
-# <bitbar.title>Mic Volume(Non-streamable)</bitbar.title>
+# <bitbar.title>Mic Volume(Non-streaming)</bitbar.title>
 # <bitbar.version>v1.0</bitbar.version>
 # <bitbar.author>Masafumi Kashiwagi</bitbar.author>
 # <bitbar.author.github>masafm</bitbar.author.github>
-# <bitbar.desc>Mic Volume(Non-streamable)</bitbar.desc>
+# <bitbar.desc>Mic Volume(Non-streaming)</bitbar.desc>
 # <bitbar.dependencies>bash,applescript,https://github.com/deweller/switchaudio-osx</bitbar.dependencies>
 # <bitbar.abouturl>https://github.com/masafm/SwiftBar-Plugin/blob/main/MicVolume.sh</bitbar.abouturl>
 
