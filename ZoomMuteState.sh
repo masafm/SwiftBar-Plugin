@@ -9,7 +9,7 @@
 # <swiftbar.type>streamable</swiftbar.type>
 
 function is_mute() {
-    /usr/bin/osascript <<EOF
+    osascript <<EOF
 property menuTitle : "ミーティング"
 property btnEnableMute : "オーディオのミュート"
 property btnDisableMute : "オーディオのミュート解除"
