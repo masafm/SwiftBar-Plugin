@@ -81,10 +81,10 @@ if len(sys.argv) >= 3:
         os.kill(pid, signal.SIGUSR1)
         sys.exit(0)
 
-i=INTERVAL
+i=INTERVAL*10
 while True:
-    if i == INTERVAL:
+    if i == INTERVAL*10:
         show_mic_volume()
         i=1
-    time.sleep(1)
+    time.sleep(0.1)
     i+=1
