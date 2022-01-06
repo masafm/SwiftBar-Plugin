@@ -55,6 +55,7 @@ function show_mute_icon() {
 :mic.slash.fill: | size=16
 ---
 Zoom Mute State
+---
 ミュート解除 | bash='$0' param1=toggle_mute terminal=false"
 }
 
@@ -64,6 +65,7 @@ function show_unmute_icon() {
 :mic.fill: | size=16
 ---
 Zoom Mute State
+---
 ミュートにする | bash='$0' param1=toggle_mute terminal=false"
 }
 
