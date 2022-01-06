@@ -28,35 +28,12 @@ return ""
 EOF
 }
 
-function toggle_mute() {
-    /usr/bin/osascript <<EOF
-property menuTitle : "ミーティング"
-property btnEnableMute : "オーディオのミュート"
-property btnDisableMute : "オーディオのミュート解除"
-if application "zoom.us" is running then
-    tell application "System Events"
-        tell application process "zoom.us"
-            if exists (menu bar item menuTitle of menu bar 1) then
-                if exists (menu item btnDisableMute of menu 1 of menu bar item menuTitle of menu bar 1) then
-                    click menu item btnDisableMute of menu 1 of menu bar item menuTitle of menu bar 1
-                else
-                    click menu item btnEnableMute of menu 1 of menu bar item menuTitle of menu bar 1
-                end if
-            end if
-        end tell
-    end tell
-end if
-EOF
-}
-
 function show_mute_icon() {
     current_icon="mute"
     echo "~~~
 :mic.slash.fill: | size=16
 ---
-Zoom Mute State
----
-ミュート解除 | bash='$0' param1=toggle_mute terminal=false"
+Zoom Mute State"
 }
 
 function show_unmute_icon() {
@@ -64,15 +41,8 @@ function show_unmute_icon() {
     echo "~~~
 :mic.fill: | size=16
 ---
-Zoom Mute State
----
-ミュートにする | bash='$0' param1=toggle_mute terminal=false"
+Zoom Mute State"
 }
-
-if [ "$1" == "toggle_mute" ];then
-    toggle_mute
-    exit
-fi
 
 function get_zoom_pid() {
     pgrep CptHost
