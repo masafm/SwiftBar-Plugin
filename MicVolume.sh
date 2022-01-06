@@ -26,9 +26,9 @@ return input volume of (get volume settings)
 EOF
 }
 
-function maximize_mic_volume() {
+function change_mic_volume() {
     /usr/bin/osascript <<EOF
-set volume input volume 100
+set volume input volume $1
 EOF
 }
 
@@ -38,7 +38,8 @@ $(get_current_device | cut -c 1-6)($(get_mic_volume)) | size=16
 ---
 Mic Volume
 ---
-マイク音量最大化 | bash='$0' param1=maximize_mic_volume terminal=false
+マイク音量最小化(F7) | bash='$0' param1=minimize_mic_volume terminal=false shortcut=F7
+マイク音量最大化(F8) | bash='$0' param1=maximize_mic_volume terminal=false shortcut=F8
 ---"
     list_input_device | while read line;do
 	if [ "$line" != "ZoomAudioDevice" -a "$line" != "IOUSBHostInterface" ];then
@@ -47,8 +48,11 @@ Mic Volume
     done
 }
 
-if [ "$1" == "maximize_mic_volume" ];then
-    maximize_mic_volume
+if [ "$1" == "minimize_mic_volume" ];then
+    change_mic_volume 0
+    exit
+elif [ "$1" == "maximize_mic_volume" ];then
+    change_mic_volume 100
     exit
 elif [ "$1" == "change_input_device" ];then
     change_input_device "$2"
