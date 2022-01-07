@@ -4,7 +4,7 @@
 # <bitbar.author>Masafumi Kashiwagi</bitbar.author>
 # <bitbar.author.github>masafm</bitbar.author.github>
 # <bitbar.desc>Mic Volume</bitbar.desc>
-# <bitbar.dependencies>python3,applescript,https://github.com/deweller/switchaudio-osx</bitbar.dependencies>
+# <bitbar.dependencies>python3,applescript,switchaudio-osx</bitbar.dependencies>
 # <bitbar.abouturl>https://github.com/masafm/SwiftBar-Plugin/blob/main/MicVolume.sh</bitbar.abouturl>
 # <swiftbar.type>streamable</swiftbar.type>
 
@@ -13,6 +13,8 @@ import sys
 import subprocess
 import time
 import os
+import shutil
+
 INTERVAL=5
 IGNORE_DEVICES=['ZoomAudioDevice']
 
@@ -63,10 +65,11 @@ Mic Volume
         if device not in IGNORE_DEVICES:
             print(f"{device} | bash='{sys.argv[0]}' param1=change_input_device param2={pid} param3='{device}' terminal=false")
     sys.stdout.flush()
-        
-signal.signal(signal.SIGTERM, exit_program)
-signal.signal(signal.SIGUSR1, refresh)
-signal.signal(signal.SIGALRM, refresh)
+
+if shutil.which("SwitchAudioSource") is None:
+    print("Please install switchaudio-osx first", file=sys.stderr)
+    print("https://github.com/deweller/switchaudio-osx", file=sys.stderr)
+    sys.exit(1)
 
 if len(sys.argv) >= 3:
     pid = int(sys.argv[2])
@@ -83,6 +86,10 @@ if len(sys.argv) >= 3:
         os.kill(pid, signal.SIGUSR1)
         sys.exit(0)
 
+signal.signal(signal.SIGTERM, exit_program)
+signal.signal(signal.SIGUSR1, refresh)
+signal.signal(signal.SIGALRM, refresh)
 signal.setitimer(signal.ITIMER_REAL, 0.1, INTERVAL)
+
 while True:
     time.sleep(3600)
