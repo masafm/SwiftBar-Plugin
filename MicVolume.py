@@ -13,7 +13,8 @@ import sys
 import subprocess
 import time
 import os
-INTERVAL=10
+INTERVAL=5
+IGNORE_DEVICES=['ZoomAudioDevice']
 
 def exit_program(sig, frame):
     sys.exit(0)
@@ -39,7 +40,7 @@ def change_input_device(dev):
 def get_mic_volume():
     cmd = ["osascript","-e","return input volume of (get volume settings)"]
     p = subprocess.run(cmd, stdout=subprocess.PIPE, text=True)
-    return p.stdout.strip()
+    return int(p.stdout.strip())
     
 def change_mic_volume(volume):
     cmd = ["osascript","-e",f"set volume input volume {volume}"]
@@ -51,7 +52,7 @@ def show_mic_volume():
     volume=get_mic_volume()
     pid=os.getpid()
     print(f"""~~~
-{device}({volume}) | size=16
+{device}({volume:03}) | size=16
 ---
 Mic Volume
 ---
@@ -59,12 +60,13 @@ Mic Volume
 マイク音量最大化(F8) | bash='{sys.argv[0]}' param1=maximize_mic_volume param2={pid} terminal=false shortcut=F8
 ---""")
     for device in list_input_devices():
-        if device != "ZoomAudioDevice" and device != "IOUSBHostInterface":
+        if device not in IGNORE_DEVICES:
             print(f"{device} | bash='{sys.argv[0]}' param1=change_input_device param2={pid} param3='{device}' terminal=false")
     sys.stdout.flush()
         
 signal.signal(signal.SIGTERM, exit_program)
 signal.signal(signal.SIGUSR1, refresh)
+signal.signal(signal.SIGALRM, refresh)
 
 if len(sys.argv) >= 3:
     pid = int(sys.argv[2])
@@ -81,10 +83,6 @@ if len(sys.argv) >= 3:
         os.kill(pid, signal.SIGUSR1)
         sys.exit(0)
 
-i=INTERVAL*10
+signal.setitimer(signal.ITIMER_REAL, 0.1, INTERVAL)
 while True:
-    if i == INTERVAL*10:
-        show_mic_volume()
-        i=1
-    time.sleep(0.1)
-    i+=1
+    time.sleep(3600)
