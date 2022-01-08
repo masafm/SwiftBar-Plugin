@@ -14,7 +14,6 @@ import subprocess
 import time
 import os
 import shutil
-import locale
 
 INTERVAL=5
 IGNORE_DEVICES=['ZoomAudioDevice']
