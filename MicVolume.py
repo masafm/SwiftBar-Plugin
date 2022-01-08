@@ -14,9 +14,11 @@ import subprocess
 import time
 import os
 import shutil
+import locale
 
 INTERVAL=5
 IGNORE_DEVICES=['ZoomAudioDevice']
+LOCALIZE={'ja_JP':['マイク音量最小化','マイク音量最大化']}
 
 def exit_program(sig, frame):
     sys.exit(0)
@@ -51,17 +53,24 @@ def change_mic_volume(volume):
 
 def show_mic_volume():
     device=get_current_device()[0:6]
+    devices=list_input_devices()
     volume=get_mic_volume()
     pid=os.getpid()
+    minimize_text='Minimize Mic Volume'
+    maximize_text='Maximize Mic Volume'
+    localize=LOCALIZE.get(locale.getlocale()[0], None)
+    if localize:
+        minimize_text=localize[0]
+        maximize_text=localize[1]
     print(f"""~~~
 {device}({volume:03}) | size=16
 ---
 Mic Volume
 ---
-マイク音量最小化(F7) | bash='{sys.argv[0]}' param1=minimize_mic_volume param2={pid} terminal=false shortcut=F7
-マイク音量最大化(F8) | bash='{sys.argv[0]}' param1=maximize_mic_volume param2={pid} terminal=false shortcut=F8
+{minimize_text}(F7) | bash='{sys.argv[0]}' param1=minimize_mic_volume param2={pid} terminal=false shortcut=F7
+{maximize_text}(F8) | bash='{sys.argv[0]}' param1=maximize_mic_volume param2={pid} terminal=false shortcut=F8
 ---""")
-    for device in list_input_devices():
+    for device in devices:
         if device not in IGNORE_DEVICES:
             print(f"{device} | bash='{sys.argv[0]}' param1=change_input_device param2={pid} param3='{device}' terminal=false")
     sys.stdout.flush()
