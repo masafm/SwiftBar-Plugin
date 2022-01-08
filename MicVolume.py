@@ -18,7 +18,6 @@ import locale
 
 INTERVAL=5
 IGNORE_DEVICES=['ZoomAudioDevice']
-LOCALIZE={'ja_JP':['マイク音量最小化','マイク音量最大化']}
 
 def exit_program(sig, frame):
     sys.exit(0)
@@ -56,19 +55,13 @@ def show_mic_volume():
     devices=list_input_devices()
     volume=get_mic_volume()
     pid=os.getpid()
-    minimize_text='Minimize Mic Volume'
-    maximize_text='Maximize Mic Volume'
-    localize=LOCALIZE.get(locale.getlocale()[0], None)
-    if localize:
-        minimize_text=localize[0]
-        maximize_text=localize[1]
     print(f"""~~~
 {device}({volume:03}) | size=16
 ---
 Mic Volume
 ---
-{minimize_text}(F7) | bash='{sys.argv[0]}' param1=minimize_mic_volume param2={pid} terminal=false shortcut=F7
-{maximize_text}(F8) | bash='{sys.argv[0]}' param1=maximize_mic_volume param2={pid} terminal=false shortcut=F8
+Minimize Mic Volume(F7) | bash='{sys.argv[0]}' param1=minimize_mic_volume param2={pid} terminal=false shortcut=F7
+Maximize Mic Volume(F8) | bash='{sys.argv[0]}' param1=maximize_mic_volume param2={pid} terminal=false shortcut=F8
 ---""")
     for device in devices:
         if device not in IGNORE_DEVICES:
