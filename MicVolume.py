@@ -50,7 +50,7 @@ def change_mic_volume(volume):
     return p.returncode
 
 def show_mic_volume():
-    device=get_current_device()[0:6]
+    device=get_current_device()[0:3]
     devices=list_input_devices()
     volume=get_mic_volume()
     pid=os.getpid()
