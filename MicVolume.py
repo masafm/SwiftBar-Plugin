@@ -55,7 +55,7 @@ def show_mic_volume():
     volume=get_mic_volume()
     pid=os.getpid()
     print(f"""~~~
-{device}({volume:03}) | size=16
+{device}({volume}) | size=16
 ---
 Mic Volume
 ---
