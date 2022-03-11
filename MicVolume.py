@@ -15,7 +15,7 @@ import time
 import os
 import shutil
 
-INTERVAL=5
+INTERVAL=10
 IGNORE_DEVICES=['ZoomAudioDevice']
 
 def exit_program(sig, frame):
