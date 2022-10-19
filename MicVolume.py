@@ -74,6 +74,8 @@ Maximize Mic Volume(F8) | bash='{sys.argv[0]}' param1=maximize_mic_volume param2
         print(f"{device} | bash='{sys.argv[0]}' param1=change_input_device param2={pid} param3='{device}' terminal=false")
     sys.stdout.flush()
 
+os.environ["PATH"] = f"/opt/homebrew/bin:{os.environ.get('PATH')}"
+
 if shutil.which("SwitchAudioSource") is None:
     print("Please install switchaudio-osx first", file=sys.stderr)
     print("https://github.com/deweller/switchaudio-osx", file=sys.stderr)
