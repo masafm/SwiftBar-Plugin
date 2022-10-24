@@ -60,10 +60,12 @@ def show_mic_volume():
         device=get_current_device()[0:3]
     volume=(int)(get_mic_volume()/10)
     if volume == 10:
-        volume = 'F'
+        volume = ''
+    else:
+        volume = f":{volume}"
     pid=os.getpid()
     print(f"""~~~
-{device}:{volume} | size=16
+{device}{volume} | size=16
 ---
 Mic Volume
 ---
