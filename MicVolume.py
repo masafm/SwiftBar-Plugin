@@ -46,7 +46,10 @@ def change_input_device(dev):
 def get_mic_volume():
     cmd = ["osascript","-e","return input volume of (get volume settings)"]
     p = subprocess.run(cmd, stdout=subprocess.PIPE, text=True)
-    return int(p.stdout.strip())
+    try:
+        return int(p.stdout.strip())
+    except:
+        return 0
     
 def change_mic_volume(volume):
     cmd = ["osascript","-e",f"set volume input volume {volume}"]
