@@ -49,7 +49,7 @@ def get_mic_volume():
     try:
         return int(p.stdout.strip())
     except:
-        return 0
+        return 100
     
 def change_mic_volume(volume):
     cmd = ["osascript","-e",f"set volume input volume {volume}"]
@@ -58,8 +58,8 @@ def change_mic_volume(volume):
 
 def show_mic_volume():
     devices=list_input_devices()
-    device=get_current_device()[0:1]
-    if len([d for d in devices if d.startswith(device)]) > 1:
+    device=get_current_device().strip()[0:1]
+    if len([d for d in devices if d.strip().startswith(device)]) > 1:
         device=get_current_device()[0:3]
     volume=(int)(get_mic_volume()/10)
     if volume == 10:
@@ -76,7 +76,7 @@ Minimize Mic Volume(F7) | bash='{sys.argv[0]}' param1=minimize_mic_volume param2
 Maximize Mic Volume(F8) | bash='{sys.argv[0]}' param1=maximize_mic_volume param2={pid} terminal=false shortcut=F8
 ---""")
     for device in devices:
-        print(f"{device} | bash='{sys.argv[0]}' param1=change_input_device param2={pid} param3='{device}' terminal=false")
+        print(f"{device.strip()} | bash='{sys.argv[0]}' param1=change_input_device param2={pid} param3='{device}' terminal=false")
     sys.stdout.flush()
 
 os.environ["PATH"] = f"/opt/homebrew/bin:{os.environ.get('PATH')}"
