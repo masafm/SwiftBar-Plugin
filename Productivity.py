@@ -35,13 +35,14 @@ def refresh(sig, frame):
 
 def show_productivity():
     productivity = int(float(get_productivity()))
-    print(f"""~~~
+    if productivity != -1:
+        print(f"""~~~
 {productivity} | size=16
 ---
 Productivity
 ---
 Dashboard | bash='open' param1='https://masa.datadoghq.com/dashboard/wyw-exk-5wc' terminal=false""")
-    sys.stdout.flush()
+        sys.stdout.flush()
 
 @tracer.wrap(resource="source_script")
 def source_script(script_path):
@@ -90,7 +91,7 @@ def get_productivity():
         # ステータスコードのチェック
         if response.status_code // 100 != 2:
             log.error(f"Failed to retrieve data from Metabase. HTTP Status Code: {response.status_code}")
-            return
+            return -1
 
         json_data = response.json()
         log.debug("metabase_response: "+str(json_data))
@@ -99,10 +100,10 @@ def get_productivity():
         log.warning(f"Request to {url} timed out, proceeding without data.")
         span = tracer.current_root_span()
         span.error = 0
-        return  # タイムアウト時はエラーにしない
+        return -1 # タイムアウト時はエラーにしない
     except RequestException as e:
         log.error(f"An error occurred while connecting to Metabase: {e}")
-        raise  # 例外を再スロー
+        return -1  # 例外を再スロー
 
     # Post data to Datadog API
     dd_api_key = os.getenv("DD_API_KEY")
