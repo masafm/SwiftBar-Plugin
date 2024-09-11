@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env DD_SERVICE=productivity DD_ENV=prod DD_VERSION=1.0 ddtrace-run python3
 # <bitbar.title>Productivity</bitbar.title>
 # <bitbar.version>v1.0</bitbar.version>
 # <bitbar.author>Masafumi Kashiwagi</bitbar.author>
@@ -41,7 +41,7 @@ def show_productivity():
 Productivity""")
     sys.stdout.flush()
 
-@tracer.wrap(service="productivity", resource="source_script")
+@tracer.wrap(resource="source_script")
 def source_script(script_path):
     # ファイルの存在を確認
     expanded_path = os.path.expanduser(script_path)
@@ -55,7 +55,7 @@ def source_script(script_path):
             os.environ[key] = value.strip()
         proc.communicate()
 
-@tracer.wrap(service="productivity", resource="get_productivity")
+@tracer.wrap(resource="get_productivity")
 def get_productivity():
     # Check if the profile script exists and source it
     source_script('~/src/masa-tools/profile-dd.sh')
