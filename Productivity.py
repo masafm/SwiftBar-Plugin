@@ -38,7 +38,9 @@ def show_productivity():
     print(f"""~~~
 {productivity} | size=16
 ---
-Productivity""")
+Productivity
+---
+Dashboard | bash='open' param1='https://masa.datadoghq.com/dashboard/wyw-exk-5wc' terminal=false""")
     sys.stdout.flush()
 
 @tracer.wrap(resource="source_script")
