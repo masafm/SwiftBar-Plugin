@@ -117,8 +117,6 @@ def get_productivity():
         productivity_weighted = person_data.get("Weighted Productivity")
         solved_tickets = person_data.get("Solved Tickets")
         solved_tickets_target = person_data.get("Solved Tickets Target")
-        if name == 'Masafumi Kashiwagi':
-            my_productivity = productivity
             
         if productivity is None:
             continue    
@@ -160,7 +158,7 @@ def get_productivity():
              "points": [
                  {
                   "timestamp": cur_timestamp,
-                  "value": int(solved_tickets)
+                  "value": float(solved_tickets)
                   },
                   ],
              "tags": [f"name:{name}",f"zendesk_id:{zendesk_id}"]
@@ -175,12 +173,15 @@ def get_productivity():
              "points": [
                  {
                   "timestamp": cur_timestamp,
-                  "value": int(solved_tickets_target)
+                  "value": float(solved_tickets_target)
                   },
                   ],
              "tags": [f"name:{name}",f"zendesk_id:{zendesk_id}"]
              }
         )
+
+        if name == 'Masafumi Kashiwagi':
+            my_productivity = float(solved_tickets) - float(solved_tickets_target)
     
     headers = {
         "Accept": "application/json",
