@@ -4,7 +4,7 @@
 # <bitbar.author>Masafumi Kashiwagi</bitbar.author>
 # <bitbar.author.github>masafm</bitbar.author.github>
 # <bitbar.desc>Productivity</bitbar.desc>
-# <bitbar.dependencies>bash,applescript</bitbar.dependencies>
+# <bitbar.dependencies>python3</bitbar.dependencies>
 # <bitbar.abouturl>https://github.com/masafm/SwiftBar-Plugin/blob/main/ZoomMuteState.sh</bitbar.abouturl>
 # <swiftbar.type>streamable</swiftbar.type>
 
@@ -18,7 +18,7 @@ import logging
 from requests.exceptions import Timeout, RequestException
 from ddtrace import tracer
 
-INTERVAL=600
+INTERVAL=60
 
 def get_logger():
     log = logging.getLogger(__name__)
