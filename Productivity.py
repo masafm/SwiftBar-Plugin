@@ -35,14 +35,13 @@ def refresh(sig, frame):
 
 def show_productivity():
     productivity = int(float(get_productivity()))
-    if productivity != -1:
-        print(f"""~~~
+    print(f"""~~~
 {productivity} | size=16
 ---
 Productivity
 ---
 Dashboard | bash='open' param1='https://masa.datadoghq.com/dashboard/wyw-exk-5wc' terminal=false""")
-        sys.stdout.flush()
+    sys.stdout.flush()
 
 @tracer.wrap(resource="source_script")
 def source_script(script_path):
