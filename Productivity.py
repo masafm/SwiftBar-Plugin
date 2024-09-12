@@ -103,7 +103,7 @@ def get_productivity():
     except RequestException as e:
         log.error(f"An error occurred while connecting to Metabase: {e}")
         return -1  # 例外を再スロー
-
+    
     # Post data to Datadog API
     dd_api_key = os.getenv("DD_API_KEY")
     dd_app_key = os.getenv("DD_APP_KEY")
@@ -115,13 +115,13 @@ def get_productivity():
         zendesk_id = person_data["Zendesk ID"]
         productivity = person_data.get("Productivity")
         productivity_weighted = person_data.get("Weighted Productivity")
+        solved_tickets = person_data.get("Solved Tickets")
+        solved_tickets_target = person_data.get("Solved Tickets Target")
         if name == 'Masafumi Kashiwagi':
             my_productivity = productivity
             
-        # ProductivityがNoneの場合はスキップ
         if productivity is None:
-            continue
-    
+            continue    
         # Datadogに送信するデータの作成
         data["series"].append(
             {
@@ -136,6 +136,8 @@ def get_productivity():
              "tags": [f"name:{name}",f"zendesk_id:{zendesk_id}"]
              }
         )
+        if productivity_weighted is None:
+            continue    
         data["series"].append(
             {
              "metric": "productivity.weighted",
@@ -144,6 +146,36 @@ def get_productivity():
                  {
                   "timestamp": cur_timestamp,
                   "value": float(productivity_weighted)
+                  },
+                  ],
+             "tags": [f"name:{name}",f"zendesk_id:{zendesk_id}"]
+             }
+        )
+        if solved_tickets is None:
+            continue    
+        data["series"].append(
+            {
+             "metric": "solved_tickets",
+             "type": 1,
+             "points": [
+                 {
+                  "timestamp": cur_timestamp,
+                  "value": int(solved_tickets)
+                  },
+                  ],
+             "tags": [f"name:{name}",f"zendesk_id:{zendesk_id}"]
+             }
+        )
+        if solved_tickets_target is None:
+            continue    
+        data["series"].append(
+            {
+             "metric": "solved_tickets.target",
+             "type": 1,
+             "points": [
+                 {
+                  "timestamp": cur_timestamp,
+                  "value": int(solved_tickets_target)
                   },
                   ],
              "tags": [f"name:{name}",f"zendesk_id:{zendesk_id}"]
