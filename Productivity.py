@@ -23,6 +23,9 @@ INTERVAL=60
 def get_logger():
     log = logging.getLogger(__name__)
     log.level = logging.CRITICAL
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.DEBUG)
+    log.addHandler(handler)
     return log
 
 log = get_logger()
