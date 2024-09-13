@@ -34,7 +34,7 @@ def refresh(sig, frame):
     show_productivity()
 
 def show_productivity():
-    productivity = int(float(get_productivity()))
+    productivity = float(get_productivity())
     print(f"""~~~
 {productivity} | size=16
 ---
