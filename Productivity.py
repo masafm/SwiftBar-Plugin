@@ -37,7 +37,9 @@ def refresh(sig, frame):
     show_productivity()
 
 def show_productivity():
-    productivity = float(get_productivity())
+    productivity = get_productivity()
+    if(not productivity):
+        productivity = 'Err'
     print(f"""~~~
 {productivity} | size=16
 ---
@@ -93,7 +95,7 @@ def get_productivity():
         # ステータスコードのチェック
         if response.status_code // 100 != 2:
             log.error(f"Failed to retrieve data from Metabase. HTTP Status Code: {response.status_code}")
-            return -1
+            return None
 
         json_data = response.json()
         log.debug("metabase_response: "+str(json_data))
@@ -102,10 +104,10 @@ def get_productivity():
         log.warning(f"Request to {url} timed out, proceeding without data.")
         span = tracer.current_root_span()
         span.error = 0
-        return -1 # タイムアウト時はエラーにしない
+        return None # タイムアウト時はエラーにしない
     except RequestException as e:
         log.error(f"An error occurred while connecting to Metabase: {e}")
-        return -1  # 例外を再スロー
+        return None
     
     # Post data to Datadog API
     dd_api_key = os.getenv("DD_API_KEY")
