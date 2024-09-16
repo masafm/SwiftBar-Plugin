@@ -4,8 +4,8 @@
 # <bitbar.author>Masafumi Kashiwagi</bitbar.author>
 # <bitbar.author.github>masafm</bitbar.author.github>
 # <bitbar.desc>Zoom Mute State</bitbar.desc>
-# <bitbar.dependencies>bash,applescript</bitbar.dependencies>
-# <bitbar.abouturl>https://github.com/masafm/SwiftBar-Plugin/blob/main/ZoomMuteState.sh</bitbar.abouturl>
+# <bitbar.dependencies>python3,applescript</bitbar.dependencies>
+# <bitbar.abouturl>https://github.com/masafm/SwiftBar-Plugin/blob/main/ZoomMuteState.py</bitbar.abouturl>
 # <swiftbar.type>streamable</swiftbar.type>
 
 import signal

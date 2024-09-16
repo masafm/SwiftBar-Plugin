@@ -5,7 +5,7 @@
 # <bitbar.author.github>masafm</bitbar.author.github>
 # <bitbar.desc>Mic Volume</bitbar.desc>
 # <bitbar.dependencies>python3,applescript,switchaudio-osx</bitbar.dependencies>
-# <bitbar.abouturl>https://github.com/masafm/SwiftBar-Plugin/blob/main/MicVolume.sh</bitbar.abouturl>
+# <bitbar.abouturl>https://github.com/masafm/SwiftBar-Plugin/blob/main/MicVolume.py</bitbar.abouturl>
 # <swiftbar.type>streamable</swiftbar.type>
 
 import signal

@@ -5,7 +5,7 @@
 # <bitbar.author.github>masafm</bitbar.author.github>
 # <bitbar.desc>Productivity</bitbar.desc>
 # <bitbar.dependencies>python3</bitbar.dependencies>
-# <bitbar.abouturl>https://github.com/masafm/SwiftBar-Plugin/blob/main/ZoomMuteState.sh</bitbar.abouturl>
+# <bitbar.abouturl>https://github.com/masafm/SwiftBar-Plugin/blob/main/Productivity.py</bitbar.abouturl>
 # <swiftbar.type>streamable</swiftbar.type>
 
 import signal
