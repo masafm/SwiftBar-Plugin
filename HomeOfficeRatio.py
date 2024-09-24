@@ -1,4 +1,4 @@
-#!/usr/bin/env DD_SERVICE=home_office_ratio DD_VERSION=1.0 DD_ENV=prod ddtrace-run python3
+#!/usr/bin/env DD_LOGS_INJECTION=true DD_SERVICE=home_office_ratio DD_VERSION=1.0 DD_ENV=prod ddtrace-run python3
 # <bitbar.title>HomeOfficeRatio</bitbar.title>
 # <bitbar.version>v1.0</bitbar.version>
 # <bitbar.author>Masafumi Kashiwagi</bitbar.author>
@@ -16,6 +16,7 @@ import os
 import requests
 import logging
 import json
+import socket
 import urllib.parse
 import jpholiday
 import datetime as d
@@ -23,18 +24,36 @@ from datetime import datetime, timedelta
 from requests.exceptions import Timeout, RequestException
 from ddtrace import tracer
 
-INTERVAL=600
+INTERVAL = 600
 ADDR = ['154.18.*', '209.249.*']
 
-def get_logger():
-    log = logging.getLogger(__name__)
-    log.level = logging.CRITICAL
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.DEBUG)
-    log.addHandler(handler)
-    return log
+class UDPSocketHandler(logging.Handler):
+    def __init__(self, host, port):
+        super().__init__()
+        self.address = (host, port)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-log = get_logger()
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            self.sock.sendto(msg.encode('utf-8'), self.address)
+        except Exception:
+            self.handleError(record)
+
+def get_logger():
+    class UTCFormatter(logging.Formatter):
+        converter = time.gmtime  # Set the time conversion to UTC
+    FORMAT = ('%(asctime)s %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] '
+              '[dd.service=%(dd.service)s dd.env=%(dd.env)s dd.version=%(dd.version)s dd.trace_id=%(dd.trace_id)s dd.span_id=%(dd.span_id)s] '
+              '- %(message)s')
+    logging.basicConfig(format=FORMAT, level=logging.DEBUG, stream=sys.stdout)
+    logging.getLogger().handlers[0].setFormatter(UTCFormatter(FORMAT))
+    logging.getLogger().handlers[0].setLevel(logging.CRITICAL)
+    log = logging.getLogger(__name__)
+    udp_handler = UDPSocketHandler("localhost", 10518)
+    udp_handler.setFormatter((UTCFormatter(FORMAT)))
+    log.addHandler(udp_handler)
+    return log
 
 def exit_program(sig, frame):
     sys.exit(0)
@@ -83,10 +102,6 @@ def get_pip():
 
 @tracer.wrap(resource="get_home_office_ratio")
 def get_home_office_ratio():
-    # Check if the profile script exists and source it
-    source_script('~/src/masa-tools/profile-dd.sh')
-    source_script('~/.env')
-
     # Get current timestamp
     cur_timestamp = int(time.time())
 
@@ -235,7 +250,31 @@ def get_home_office_ratio():
         
     return ratio
 
+def resolve_and_check_connectivity(hostname):
+    while True:
+        try:
+            # 名前解決を試みる
+            ip_address = socket.gethostbyname(hostname)
+            log.debug(f"{hostname} resolved to {ip_address}")
+
+            # ポート443への接続を試みる
+            with socket.create_connection((ip_address, 443), timeout=5) as sock:
+                log.debug(f"Successfully connected to {hostname} on port 443")
+                break  # 接続が成功したらループを抜ける
+
+        except socket.gaierror:
+            # 名前解決に失敗した場合
+            log.debug(f"Failed to resolve {hostname}. Retrying in 5 seconds...")
+            time.sleep(5)
+        except (socket.timeout, socket.error):
+            # 接続に失敗した場合
+            log.debug(f"Failed to connect to {hostname} on port 443. Retrying in 5 seconds...")
+            time.sleep(5)
+
 def main():
+    source_script('~/src/masa-tools/profile-dd.sh')
+    source_script('~/.env')
+    resolve_and_check_connectivity("checkip.amazonaws.com")
     signal.signal(signal.SIGTERM, exit_program)
     signal.signal(signal.SIGALRM, refresh)
     signal.setitimer(signal.ITIMER_REAL, 0.1, INTERVAL)
@@ -243,4 +282,5 @@ def main():
     while True:
         time.sleep(3600)
 
+log = get_logger()
 main()
