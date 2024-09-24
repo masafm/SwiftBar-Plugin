@@ -65,7 +65,9 @@ def show_productivity():
 ---
 Productivity
 ---
-Dashboard | bash='open' param1='https://masa.datadoghq.com/dashboard/wyw-exk-5wc' terminal=false""")
+Dashboard | bash='open' param1='https://masa.datadoghq.com/dashboard/wyw-exk-5wc' terminal=false
+Logs | bash='open' param1='https://masa.datadoghq.com/logs?query=service%3Aproductivity' terminal=false
+Traces | bash='open' param1='https://masa.datadoghq.com/apm/traces?query=service%3Ahome_office_ratio' terminal=false""")
     sys.stdout.flush()
 
 @tracer.wrap(resource="source_script")
