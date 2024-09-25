@@ -24,7 +24,8 @@ from datetime import datetime, timedelta
 from requests.exceptions import Timeout, RequestException
 from ddtrace import tracer
 
-INTERVAL = 600
+INTERVAL = 60
+HOME_THRESHOLD = 20
 ADDR = ['154.18.*', '209.249.*']
 
 class UDPSocketHandler(logging.Handler):
@@ -160,7 +161,7 @@ def get_home_office_ratio():
 
         # Define queries
         query_office = "count_not_null(sum:work{"+ip+"}.as_count().rollup(daily, 'Asia/Tokyo'))"
-        query_home = "count_not_null(cutoff_min(sum:work{NOT ("+ip+")}.as_count().rollup(daily, 'Asia/Tokyo'), 20))"
+        query_home = "count_not_null(cutoff_min(sum:work{NOT ("+ip+")}.as_count().rollup(daily, 'Asia/Tokyo'), "+str(HOME_THRESHOLD)+"))"
 
         encoded_query_office = urllib.parse.quote(query_office)
         encoded_query_home = urllib.parse.quote(query_home)
