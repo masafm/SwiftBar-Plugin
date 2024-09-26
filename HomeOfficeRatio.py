@@ -105,6 +105,9 @@ def get_pip():
 
 @tracer.wrap(resource="get_home_office_ratio")
 def get_home_office_ratio():
+    source_script('~/src/masa-tools/profile-dd.sh')
+    source_script('~/.env')
+
     # Get current timestamp
     cur_timestamp = int(time.time())
 
@@ -146,7 +149,7 @@ def get_home_office_ratio():
     # 曜日を取得 (月曜日が0、日曜日が6)
     weekday = today.weekday()
     # 土曜日 (5) と日曜日 (6) と祝日を除外する
-    if weekday < 5 and not jpholiday.is_holiday(today):
+    if weekday < 5 and not jpholiday.is_holiday(today) and d.datetime.now().hour >= 5:
         response = requests.post("https://api.datadoghq.com/api/v2/series", headers=headers, json=data)
 
     ratio = 0
