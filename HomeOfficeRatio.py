@@ -75,7 +75,7 @@ Home Office Ratio
 ---
 Dashboard | bash='open' param1='https://masa.datadoghq.com/dashboard/hdq-kyy-3km' terminal=false
 Logs | bash='open' param1='https://masa.datadoghq.com/logs?query=service%3Ahome_office_ratio' terminal=false
-Traces | bash='open' param1='https://masa.datadoghq.com/apm/traces?query=service%3Aproductivity' terminal=false""")
+Traces | bash='open' param1='https://masa.datadoghq.com/apm/traces?query=service%3Ahome_office_ratio' terminal=false""")
     sys.stdout.flush()
 
 @tracer.wrap(resource="source_script")
