@@ -135,7 +135,7 @@ def get_productivity():
     dd_app_key = os.getenv("DD_APP_KEY")
 
     data = {"series": []}
-    my_productivity=None
+    my_productivity = 'n/a'
     for person_data in json_data:
         name = person_data["Name"]
         zendesk_id = person_data["Zendesk ID"]
