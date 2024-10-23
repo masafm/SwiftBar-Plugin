@@ -58,7 +58,7 @@ def refresh(sig, frame):
 
 def show_productivity():
     productivity = get_productivity()
-    if(not productivity):
+    if(productivity is None):
         productivity = 'Err'
     print(f"""~~~
 {productivity} | size=16
