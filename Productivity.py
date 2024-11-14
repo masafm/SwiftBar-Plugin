@@ -67,7 +67,8 @@ Productivity
 ---
 Dashboard | bash='open' param1='https://masa.datadoghq.com/dashboard/wyw-exk-5wc' terminal=false
 Logs | bash='open' param1='https://masa.datadoghq.com/logs?query=service%3Aproductivity' terminal=false
-Traces | bash='open' param1='https://masa.datadoghq.com/apm/traces?query=service%3Ahome_office_ratio' terminal=false""")
+Traces | bash='open' param1='https://masa.datadoghq.com/apm/traces?query=service%3Ahome_office_ratio' terminal=false
+Metabase | bash='open' param1='https://metabase-analytics.us1.prod.dog/dashboard/40324-tse-pse-kpis-2-0?tab=166-utilization-%26-productivity&kpi_summary_timeframe=thismonth&other_tabs_timeframe=past6months~&role_group=Technical Support Engineering&role=&region=&location=&director=&manager=&engineer_name=Masafumi Kashiwagi&engineer_start_date=&engineer_days_in_role=&engineer_specialization=' terminal=false""")
     sys.stdout.flush()
 
 @tracer.wrap(resource="source_script")
@@ -135,7 +136,6 @@ def get_productivity():
     dd_app_key = os.getenv("DD_APP_KEY")
 
     data = {"series": []}
-    my_productivity = 'n/a'
     for person_data in json_data:
         name = person_data["Name"]
         zendesk_id = person_data["Zendesk ID"]
@@ -143,9 +143,13 @@ def get_productivity():
         productivity_weighted = person_data.get("Weighted Productivity")
         solved_tickets = person_data.get("Solved Tickets")
         solved_tickets_target = person_data.get("Solved Tickets Target")
-            
+
+        if name == 'Masafumi Kashiwagi':
+            continue
+
         if productivity is None:
-            continue    
+            continue
+
         # Datadogに送信するデータの作成
         data["series"].append(
             {
@@ -206,9 +210,6 @@ def get_productivity():
              }
         )
 
-        if name == 'Masafumi Kashiwagi':
-            my_productivity = float(solved_tickets) - float(solved_tickets_target)
-    
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -224,7 +225,21 @@ def get_productivity():
     else:
         log.error(f"Failed to send metrics. Response: {response.text}")
 
-    return my_productivity
+    # 最小の weighted productivity を探す
+    min_weighted_productivity = None
+    for person_data in json_data:
+        if person_data.get("Name") == 'Masafumi Kashiwagi':
+            continue
+        productivity_weighted = person_data.get("Weighted Productivity")
+        if productivity_weighted is not None:
+            productivity_weighted = float(productivity_weighted)
+            if min_weighted_productivity is None or productivity_weighted < min_weighted_productivity:
+                min_weighted_productivity = productivity_weighted
+
+    if min_weighted_productivity is None:
+        min_weighted_productivity = 'Err'
+
+    return int(min_weighted_productivity)
 
 def resolve_and_check_connectivity(hostname):
     while True:
