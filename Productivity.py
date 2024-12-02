@@ -239,7 +239,10 @@ def get_productivity():
     if min_weighted_productivity is None:
         min_weighted_productivity = 'Err'
 
-    return int(min_weighted_productivity)
+    try:
+        return int(min_weighted_productivity)
+    except:
+        return min_weighted_productivity
 
 def resolve_and_check_connectivity(hostname):
     while True:
