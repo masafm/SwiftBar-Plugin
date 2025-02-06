@@ -20,6 +20,9 @@ property btnDisableMute : "オーディオのミュート解除"
 if application "zoom.us" is running then
     tell application "System Events"
         tell application process "zoom.us"
+            if (exists window "Transcript") then
+                click button 1 of window "Transcript"
+            end if
             if exists (menu bar item menuTitle of menu bar 1) then
                 if exists (menu item btnDisableMute of menu 1 of menu bar item menuTitle of menu bar 1) then
                     return 1
