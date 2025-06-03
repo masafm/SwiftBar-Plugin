@@ -67,8 +67,7 @@ Productivity
 ---
 Dashboard | bash='open' param1='https://masa.datadoghq.com/dashboard/wyw-exk-5wc' terminal=false
 Logs | bash='open' param1='https://masa.datadoghq.com/logs?query=service%3Aproductivity' terminal=false
-Traces | bash='open' param1='https://masa.datadoghq.com/apm/traces?query=service%3Ahome_office_ratio' terminal=false
-Metabase | bash='open' param1='https://metabase-analytics.us1.prod.dog/dashboard/40324-tse-pse-kpis-2-0?tab=166-utilization-%26-productivity&kpi_summary_timeframe=thismonth&other_tabs_timeframe=past6months~&role_group=Technical Support Engineering&role=&region=&location=&director=&manager=&engineer_name=Masafumi Kashiwagi&engineer_start_date=&engineer_days_in_role=&engineer_specialization=' terminal=false""")
+Traces | bash='open' param1='https://masa.datadoghq.com/apm/traces?query=service%3Aproductivity' terminal=false""")
     sys.stdout.flush()
 
 @tracer.wrap(resource="source_script")
@@ -107,7 +106,9 @@ def get_productivity():
         }
 
     data = {
-        "parameters": "[]"
+        "parameters": "[]",
+        "format_rows": "true",
+        "pivot_results": "false"
     }
 
     try:
@@ -142,9 +143,10 @@ def get_productivity():
         productivity = person_data.get("Productivity")
         productivity_weighted = person_data.get("Weighted Productivity")
         solved_tickets = person_data.get("Solved Tickets")
+        solved_tickets_weights = person_data.get("Solved Tickets Weights")
         solved_tickets_target = person_data.get("Solved Tickets Target")
 
-        if name == 'Masafumi Kashiwagi':
+        if name == 'Tetsuya Mashima':
             continue
 
         if productivity is None:
@@ -184,11 +186,26 @@ def get_productivity():
         data["series"].append(
             {
              "metric": "solved_tickets",
-             "type": 1,
+             "type": 3,
              "points": [
                  {
                   "timestamp": cur_timestamp,
                   "value": float(solved_tickets)
+                  },
+                  ],
+             "tags": [f"name:{name}",f"zendesk_id:{zendesk_id}"]
+             }
+        )
+        if solved_tickets_weights is None:
+            continue
+        data["series"].append(
+            {
+             "metric": "solved_tickets_weights",
+             "type": 3,
+             "points": [
+                 {
+                  "timestamp": cur_timestamp,
+                  "value": float(solved_tickets_weights)
                   },
                   ],
              "tags": [f"name:{name}",f"zendesk_id:{zendesk_id}"]
@@ -199,7 +216,7 @@ def get_productivity():
         data["series"].append(
             {
              "metric": "solved_tickets.target",
-             "type": 1,
+             "type": 3,
              "points": [
                  {
                   "timestamp": cur_timestamp,
@@ -226,23 +243,22 @@ def get_productivity():
         log.error(f"Failed to send metrics. Response: {response.text}")
 
     # 最小の weighted productivity を探す
-    min_weighted_productivity = None
+    min_solved_ticket_weight_diff = None
     for person_data in json_data:
-        if person_data.get("Name") == 'Masafumi Kashiwagi':
+        if person_data.get("Name") == 'Tetsuya Mashima':
             continue
-        productivity_weighted = person_data.get("Weighted Productivity")
-        if productivity_weighted is not None:
-            productivity_weighted = float(productivity_weighted)
-            if min_weighted_productivity is None or productivity_weighted < min_weighted_productivity:
-                min_weighted_productivity = productivity_weighted
+        if person_data.get("Solved Tickets Weights") is not None:
+            solved_ticket_weight_diff = float(person_data.get("Solved Tickets Weights")) - float(person_data.get("Solved Tickets Target"))
+            if min_solved_ticket_weight_diff is None or solved_ticket_weight_diff < min_solved_ticket_weight_diff:
+                min_solved_ticket_weight_diff = solved_ticket_weight_diff
 
-    if min_weighted_productivity is None:
-        min_weighted_productivity = 'Err'
+    if min_solved_ticket_weight_diff is None:
+        solved_ticket_weight_diff = 'Err'
 
     try:
-        return int(min_weighted_productivity)
+        return int(min_solved_ticket_weight_diff)
     except:
-        return min_weighted_productivity
+        return min_solved_ticket_weight_diff
 
 def resolve_and_check_connectivity(hostname):
     while True:
