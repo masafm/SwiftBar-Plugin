@@ -140,13 +140,13 @@ def get_productivity():
     for person_data in json_data:
         name = person_data["Name"]
         zendesk_id = person_data["Zendesk ID"]
-        productivity = person_data.get("Productivity")
-        productivity_weighted = person_data.get("Weighted Productivity")
-        solved_tickets = person_data.get("Solved Tickets")
-        solved_tickets_weights = person_data.get("Solved Tickets Weights")
-        solved_tickets_target = person_data.get("Solved Tickets Target")
+        productivity = person_data.get("Productivity").replace(",", "")
+        productivity_weighted = person_data.get("Weighted Productivity").replace(",", "")
+        solved_tickets = person_data.get("Solved Tickets").replace(",", "")
+        solved_tickets_weights = person_data.get("Solved Tickets Weights").replace(",", "")
+        solved_tickets_target = person_data.get("Solved Tickets Target").replace(",", "")
 
-        if name == 'Tetsuya Mashima':
+        if name == 'Tetsuya Mashima' or name == 'Keisuke Umegaki' or name == 'Yuta Uchimine':
             continue
 
         if productivity is None:
@@ -245,7 +245,7 @@ def get_productivity():
     # 最小の weighted productivity を探す
     min_solved_ticket_weight_diff = None
     for person_data in json_data:
-        if person_data.get("Name") == 'Tetsuya Mashima':
+        if person_data.get("Name") == 'Tetsuya Mashima' or person_data.get("Name") == 'Keisuke Umegaki' or person_data.get("Name") == 'Yuta Uchimine':
             continue
         if person_data.get("Solved Tickets Weights") is not None:
             solved_ticket_weight_diff = float(person_data.get("Solved Tickets Weights")) - float(person_data.get("Solved Tickets Target"))
