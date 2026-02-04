@@ -140,16 +140,16 @@ def get_productivity():
     for person_data in json_data:
         name = person_data["Name"]
         zendesk_id = person_data["Zendesk ID"]
-        productivity = person_data.get("Productivity").replace(",", "")
-        productivity_weighted = person_data.get("Weighted Productivity").replace(",", "")
-        solved_tickets = person_data.get("Solved Tickets").replace(",", "")
-        solved_tickets_weights = person_data.get("Solved Tickets Weights").replace(",", "")
-        solved_tickets_target = person_data.get("Solved Tickets Target").replace(",", "")
+        productivity = (person_data.get("Productivity") or "").replace(",", "")
+        productivity_weighted = (person_data.get("Weighted Productivity") or "").replace(",", "")
+        solved_tickets = (person_data.get("Solved Tickets") or "").replace(",", "")
+        solved_tickets_weights = (person_data.get("Solved Tickets Weights") or "").replace(",", "")
+        solved_tickets_target = (person_data.get("Solved Tickets Target") or "").replace(",", "")
 
         if name == 'Tetsuya Mashima' or name == 'Keisuke Umegaki' or name == 'Yuta Uchimine':
             continue
 
-        if productivity is None:
+        if productivity is None or productivity == "":
             continue
 
         # Datadogに送信するデータの作成
