@@ -279,6 +279,7 @@ def resolve_and_check_connectivity(hostname):
 
 def main():
     source_script('~/src/masa-tools/profile-dd.sh')
+    source_script('~/.env')
     resolve_and_check_connectivity(urlparse(os.getenv("METABASE_URL")).netloc)
     signal.signal(signal.SIGTERM, exit_program)
     signal.signal(signal.SIGALRM, refresh)
