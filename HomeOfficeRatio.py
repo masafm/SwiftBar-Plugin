@@ -105,9 +105,6 @@ def get_pip():
 
 @tracer.wrap(resource="get_home_office_ratio")
 def get_home_office_ratio():
-    source_script('~/src/masa-tools/profile-dd.sh')
-    source_script('~/.env')
-
     # Get current timestamp
     cur_timestamp = int(time.time())
 

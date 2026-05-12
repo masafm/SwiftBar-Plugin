@@ -86,8 +86,6 @@ def source_script(script_path):
 
 @tracer.wrap(resource="get_productivity")
 def get_productivity():
-    source_script('~/src/masa-tools/profile-dd.sh')
-
     # Get current timestamp
     cur_timestamp = int(time.time())
 
