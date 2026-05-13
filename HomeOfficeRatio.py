@@ -27,6 +27,7 @@ from ddtrace import tracer
 INTERVAL = 60
 HOME_THRESHOLD = 20
 ADDR = ['154.18.*', '209.249.*']
+KEYCHAIN_SERVICE = 'swiftbar'
 
 class UDPSocketHandler(logging.Handler):
     def __init__(self, host, port):
@@ -56,6 +57,18 @@ def get_logger():
     log.addHandler(udp_handler)
     return log
 
+def keychain_get(key):
+    try:
+        result = subprocess.run(
+            ['security', 'find-generic-password', '-a', key, '-s', KEYCHAIN_SERVICE, '-w'],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return None
+
 def exit_program(sig, frame):
     sys.exit(0)
 
@@ -77,20 +90,6 @@ Dashboard | bash='open' param1='https://masa.datadoghq.com/dashboard/hdq-kyy-3km
 Logs | bash='open' param1='https://masa.datadoghq.com/logs?query=service%3Ahome_office_ratio' terminal=false
 Traces | bash='open' param1='https://masa.datadoghq.com/apm/traces?query=service%3Ahome_office_ratio' terminal=false""")
     sys.stdout.flush()
-
-@tracer.wrap(resource="source_script")
-def source_script(script_path):
-    # ファイルの存在を確認
-    expanded_path = os.path.expanduser(script_path)
-    if os.path.exists(expanded_path):
-        # シェルスクリプトをサブシェルで実行し、環境変数をキャプチャ
-        command = f"source {expanded_path} && env"
-        proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, executable='/bin/zsh')
-        for line in proc.stdout:
-            # 各行を分割して環境変数を取得
-            (key, _, value) = line.decode('utf-8').partition("=")
-            os.environ[key] = value.strip()
-        proc.communicate()
 
 
 @tracer.wrap(resource="get_pip")
@@ -146,11 +145,11 @@ def get_home_office_ratio():
     # 曜日を取得 (月曜日が0、日曜日が6)
     weekday = today.weekday()
     # 土曜日 (5) と日曜日 (6) と祝日を除外する
-    if weekday < 5 and not jpholiday.is_holiday(today) and d.datetime.now().hour >= 5:
-        response = requests.post("https://api.datadoghq.com/api/v2/series", headers=headers, json=data)
-
     ratio = 0
     try:
+        if weekday < 5 and not jpholiday.is_holiday(today) and d.datetime.now().hour >= 5:
+            response = requests.post("https://api.datadoghq.com/api/v2/series", headers=headers, json=data)
+
         # Calculate the start and end timestamps for the current month
         first_day_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         from_timestamp = int(first_day_of_month.timestamp())
@@ -275,8 +274,8 @@ def resolve_and_check_connectivity(hostname):
             time.sleep(5)
 
 def main():
-    source_script('~/src/masa-tools/profile-dd.sh')
-    source_script('~/.env')
+    os.environ['DD_API_KEY'] = keychain_get('DD_API_KEY') or ''
+    os.environ['DD_APP_KEY'] = keychain_get('DD_APP_KEY') or ''
     resolve_and_check_connectivity("checkip.amazonaws.com")
     signal.signal(signal.SIGTERM, exit_program)
     signal.signal(signal.SIGALRM, refresh)

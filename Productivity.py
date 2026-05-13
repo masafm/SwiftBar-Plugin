@@ -21,6 +21,7 @@ from requests.exceptions import Timeout, RequestException
 from ddtrace import tracer
 
 INTERVAL = 60
+KEYCHAIN_SERVICE = 'swiftbar'
 
 class UDPSocketHandler(logging.Handler):
     def __init__(self, host, port):
@@ -50,6 +51,28 @@ def get_logger():
     log.addHandler(udp_handler)
     return log
 
+def keychain_get(key):
+    try:
+        result = subprocess.run(
+            ['security', 'find-generic-password', '-a', key, '-s', KEYCHAIN_SERVICE, '-w'],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return None
+
+def source_script(script_path):
+    expanded_path = os.path.expanduser(script_path)
+    if os.path.exists(expanded_path):
+        command = f"source {expanded_path} && env"
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, executable='/bin/zsh')
+        for line in proc.stdout:
+            (key, _, value) = line.decode('utf-8').partition("=")
+            os.environ[key] = value.strip()
+        proc.communicate()
+
 def exit_program(sig, frame):
     sys.exit(0)
 
@@ -70,19 +93,6 @@ Logs | bash='open' param1='https://masa.datadoghq.com/logs?query=service%3Aprodu
 Traces | bash='open' param1='https://masa.datadoghq.com/apm/traces?query=service%3Aproductivity' terminal=false""")
     sys.stdout.flush()
 
-@tracer.wrap(resource="source_script")
-def source_script(script_path):
-    # ファイルの存在を確認
-    expanded_path = os.path.expanduser(script_path)
-    if os.path.exists(expanded_path):
-        # シェルスクリプトをサブシェルで実行し、環境変数をキャプチャ
-        command = f"source {expanded_path} && env"
-        proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, executable='/bin/zsh')
-        for line in proc.stdout:
-            # 各行を分割して環境変数を取得
-            (key, _, value) = line.decode('utf-8').partition("=")
-            os.environ[key] = value.strip()
-        proc.communicate()
 
 @tracer.wrap(resource="get_productivity")
 def get_productivity():
@@ -232,13 +242,14 @@ def get_productivity():
         }
 
     # DatadogにPOSTリクエストを送信
-    response = requests.post("https://api.datadoghq.com/api/v2/series", headers=headers, json=data)
-
-    # レスポンスを確認
-    if response.status_code == 202:
-        log.info(f"Successfully sent metrics")
-    else:
-        log.error(f"Failed to send metrics. Response: {response.text}")
+    try:
+        response = requests.post("https://api.datadoghq.com/api/v2/series", headers=headers, json=data)
+        if response.status_code == 202:
+            log.info(f"Successfully sent metrics")
+        else:
+            log.error(f"Failed to send metrics. Response: {response.text}")
+    except Exception as e:
+        log.error(f"Exception posting to Datadog: {e}", stack_info=True)
 
     # 最小の weighted productivity を探す
     min_solved_ticket_weight_diff = None
@@ -279,7 +290,8 @@ def resolve_and_check_connectivity(hostname):
 
 def main():
     source_script('~/src/masa-tools/profile-dd.sh')
-    source_script('~/.env')
+    os.environ['DD_API_KEY'] = keychain_get('DD_API_KEY') or ''
+    os.environ['DD_APP_KEY'] = keychain_get('DD_APP_KEY') or ''
     resolve_and_check_connectivity(urlparse(os.getenv("METABASE_URL")).netloc)
     signal.signal(signal.SIGTERM, exit_program)
     signal.signal(signal.SIGALRM, refresh)
