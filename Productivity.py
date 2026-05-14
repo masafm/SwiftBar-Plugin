@@ -23,17 +23,24 @@ from ddtrace import tracer
 INTERVAL = 60
 KEYCHAIN_SERVICE = 'swiftbar'
 
-class UDPSocketHandler(logging.Handler):
+class TCPSocketHandler(logging.Handler):
     def __init__(self, host, port):
         super().__init__()
         self.address = (host, port)
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock = None
+
+    def connect(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect(self.address)
 
     def emit(self, record):
         try:
-            msg = self.format(record)
-            self.sock.sendto(msg.encode('utf-8'), self.address)
+            if self.sock is None:
+                self.connect()
+            msg = self.format(record) + '\n'
+            self.sock.sendall(msg.encode('utf-8'))
         except Exception:
+            self.sock = None
             self.handleError(record)
 
 def get_logger():
@@ -46,9 +53,9 @@ def get_logger():
     logging.getLogger().handlers[0].setFormatter(UTCFormatter(FORMAT))
     logging.getLogger().handlers[0].setLevel(logging.CRITICAL)
     log = logging.getLogger(__name__)
-    udp_handler = UDPSocketHandler("localhost", 10519)
-    udp_handler.setFormatter((UTCFormatter(FORMAT)))
-    log.addHandler(udp_handler)
+    tcp_handler = TCPSocketHandler("localhost", 10519)
+    tcp_handler.setFormatter((UTCFormatter(FORMAT)))
+    log.addHandler(tcp_handler)
     return log
 
 def keychain_get(key):
