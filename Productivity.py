@@ -297,6 +297,7 @@ def resolve_and_check_connectivity(hostname):
             time.sleep(5)
 
 def main():
+    source_script('~/src/masa-tools/profile-dd.sh')
     os.environ['DD_API_KEY'] = keychain_get('DD_API_KEY') or ''
     os.environ['DD_APP_KEY'] = keychain_get('DD_APP_KEY') or ''
     resolve_and_check_connectivity(urlparse(os.getenv("METABASE_URL")).netloc)
