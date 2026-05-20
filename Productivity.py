@@ -15,6 +15,7 @@ import time
 import os
 import requests
 import logging
+import json
 import socket
 from urllib.parse import urlparse
 from requests.exceptions import Timeout, RequestException
@@ -22,6 +23,30 @@ from ddtrace import tracer
 
 INTERVAL = 60
 KEYCHAIN_SERVICE = 'swiftbar'
+
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        ts = time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime(record.created))
+        log_entry = {
+            'timestamp': f'{ts}.{int(record.msecs):03d}Z',
+            'status': record.levelname.lower(),
+            'message': record.getMessage(),
+            'logger': record.name,
+            'file': f'{record.filename}:{record.lineno}',
+        }
+        for key in ['dd.service', 'dd.env', 'dd.version', 'dd.trace_id', 'dd.span_id']:
+            if record.__dict__.get(key):
+                log_entry[key] = str(record.__dict__[key])
+        skip = {'message', 'asctime', 'args', 'created', 'exc_info', 'exc_text', 'filename',
+                'funcName', 'levelname', 'levelno', 'lineno', 'module', 'msecs', 'msg',
+                'name', 'pathname', 'process', 'processName', 'relativeCreated',
+                'stack_info', 'thread', 'threadName', 'taskName'}
+        for key, val in record.__dict__.items():
+            if key not in skip and not key.startswith('dd.'):
+                log_entry[key] = val
+        if record.exc_info:
+            log_entry['error.stack'] = self.formatException(record.exc_info)
+        return json.dumps(log_entry, ensure_ascii=False, default=str)
 
 class TCPSocketHandler(logging.Handler):
     def __init__(self, host, port):
@@ -45,7 +70,7 @@ class TCPSocketHandler(logging.Handler):
 
 def get_logger():
     class UTCFormatter(logging.Formatter):
-        converter = time.gmtime  # Set the time conversion to UTC
+        converter = time.gmtime
     FORMAT = ('%(asctime)s %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] '
               '[dd.service=%(dd.service)s dd.env=%(dd.env)s dd.version=%(dd.version)s dd.trace_id=%(dd.trace_id)s dd.span_id=%(dd.span_id)s] '
               '- %(message)s')
@@ -54,7 +79,7 @@ def get_logger():
     logging.getLogger().handlers[0].setLevel(logging.CRITICAL)
     log = logging.getLogger(__name__)
     tcp_handler = TCPSocketHandler("localhost", 10519)
-    tcp_handler.setFormatter((UTCFormatter(FORMAT)))
+    tcp_handler.setFormatter(JSONFormatter())
     log.addHandler(tcp_handler)
     return log
 
@@ -104,14 +129,11 @@ Traces | bash='open' param1='https://masa.datadoghq.com/apm/traces?query=service
 @tracer.wrap(resource="get_productivity")
 def get_productivity():
     source_script('~/src/masa-tools/profile-dd.sh')
-    # Get current timestamp
     cur_timestamp = int(time.time())
 
     url = os.getenv("METABASE_URL")
-
-    # 環境変数からクッキーを取得
     cookie = os.getenv("METABASE_COOKIE")
-    
+
     headers = {
         "accept": "application/json",
         "accept-language": "ja,en-US;q=0.9,en;q=0.8",
@@ -119,7 +141,7 @@ def get_productivity():
         "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
         "cookie": cookie,
         "pragma": "no-cache",
-        }
+    }
 
     data = {
         "parameters": "[]",
@@ -128,27 +150,24 @@ def get_productivity():
     }
 
     try:
-        # POSTリクエストを送信し、タイムアウトは許容
         response = requests.post(url, headers=headers, data=data, timeout=10)
 
-        # ステータスコードのチェック
         if response.status_code // 100 != 2:
-            log.error(f"Failed to retrieve data from Metabase. HTTP Status Code: {response.status_code}")
+            log.error(f"Metabase returned HTTP {response.status_code}", extra={"status_code": response.status_code})
             return None
 
         json_data = response.json()
-        log.debug("metabase_response: "+str(json_data))
+        log.debug("Fetched productivity data from Metabase", extra={"metabase_response": json_data})
 
     except Timeout:
-        log.warning(f"Request to {url} timed out, proceeding without data.")
+        log.warning(f"Metabase request timed out, skipping this interval", extra={"url": url})
         span = tracer.current_root_span()
         span.error = 0
-        return None # タイムアウト時はエラーにしない
-    except RequestException as e:
-        log.error(f"An error occurred while connecting to Metabase: {e}")
         return None
-    
-    # Post data to Datadog API
+    except RequestException as e:
+        log.error("Failed to connect to Metabase", exc_info=True)
+        return None
+
     dd_api_key = os.getenv("DD_API_KEY")
     dd_app_key = os.getenv("DD_APP_KEY")
 
@@ -168,98 +187,60 @@ def get_productivity():
         if productivity is None or productivity == "":
             continue
 
-        # Datadogに送信するデータの作成
-        data["series"].append(
-            {
-             "metric": "productivity",
-             "type": 3,
-             "points": [
-                 {
-                  "timestamp": cur_timestamp,
-                  "value": float(productivity)
-                  },
-                  ],
-             "tags": [f"name:{name}",f"zendesk_id:{zendesk_id}"]
-             }
-        )
+        data["series"].append({
+            "metric": "productivity",
+            "type": 3,
+            "points": [{"timestamp": cur_timestamp, "value": float(productivity)}],
+            "tags": [f"name:{name}", f"zendesk_id:{zendesk_id}"]
+        })
         if productivity_weighted is None:
-            continue    
-        data["series"].append(
-            {
-             "metric": "productivity.weighted",
-             "type": 3,
-             "points": [
-                 {
-                  "timestamp": cur_timestamp,
-                  "value": float(productivity_weighted)
-                  },
-                  ],
-             "tags": [f"name:{name}",f"zendesk_id:{zendesk_id}"]
-             }
-        )
+            continue
+        data["series"].append({
+            "metric": "productivity.weighted",
+            "type": 3,
+            "points": [{"timestamp": cur_timestamp, "value": float(productivity_weighted)}],
+            "tags": [f"name:{name}", f"zendesk_id:{zendesk_id}"]
+        })
         if solved_tickets is None:
-            continue    
-        data["series"].append(
-            {
-             "metric": "solved_tickets",
-             "type": 3,
-             "points": [
-                 {
-                  "timestamp": cur_timestamp,
-                  "value": float(solved_tickets)
-                  },
-                  ],
-             "tags": [f"name:{name}",f"zendesk_id:{zendesk_id}"]
-             }
-        )
+            continue
+        data["series"].append({
+            "metric": "solved_tickets",
+            "type": 3,
+            "points": [{"timestamp": cur_timestamp, "value": float(solved_tickets)}],
+            "tags": [f"name:{name}", f"zendesk_id:{zendesk_id}"]
+        })
         if solved_tickets_weights is None:
             continue
-        data["series"].append(
-            {
-             "metric": "solved_tickets_weights",
-             "type": 3,
-             "points": [
-                 {
-                  "timestamp": cur_timestamp,
-                  "value": float(solved_tickets_weights)
-                  },
-                  ],
-             "tags": [f"name:{name}",f"zendesk_id:{zendesk_id}"]
-             }
-        )
+        data["series"].append({
+            "metric": "solved_tickets_weights",
+            "type": 3,
+            "points": [{"timestamp": cur_timestamp, "value": float(solved_tickets_weights)}],
+            "tags": [f"name:{name}", f"zendesk_id:{zendesk_id}"]
+        })
         if solved_tickets_target is None:
-            continue    
-        data["series"].append(
-            {
-             "metric": "solved_tickets.target",
-             "type": 3,
-             "points": [
-                 {
-                  "timestamp": cur_timestamp,
-                  "value": float(solved_tickets_target)
-                  },
-                  ],
-             "tags": [f"name:{name}",f"zendesk_id:{zendesk_id}"]
-             }
-        )
+            continue
+        data["series"].append({
+            "metric": "solved_tickets.target",
+            "type": 3,
+            "points": [{"timestamp": cur_timestamp, "value": float(solved_tickets_target)}],
+            "tags": [f"name:{name}", f"zendesk_id:{zendesk_id}"]
+        })
 
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
         "DD-API-KEY": dd_api_key
-        }
+    }
 
-    # DatadogにPOSTリクエストを送信
     try:
         response = requests.post("https://api.datadoghq.com/api/v2/series", headers=headers, json=data)
         if response.status_code == 202:
-            log.info(f"Successfully sent metrics")
+            log.info(f"Sent {len(data['series'])} metric series to Datadog", extra={"series_count": len(data['series'])})
         else:
-            log.error(f"Failed to send metrics. Response: {response.text}")
+            log.error(f"Failed to send metrics to Datadog: HTTP {response.status_code}", extra={"status_code": response.status_code, "response_body": response.text})
     except Exception as e:
-        log.error(f"Exception posting to Datadog: {e}", stack_info=True)
+        log.error("Failed to post metrics to Datadog", exc_info=True)
 
-    # 最小の weighted productivity を探す
     min_solved_ticket_weight_diff = None
     for person_data in json_data:
         if person_data.get("Name") == 'Tetsuya Mashima' or person_data.get("Name") == 'Keisuke Umegaki' or person_data.get("Name") == 'Yuta Uchimine':
@@ -272,6 +253,8 @@ def get_productivity():
     if min_solved_ticket_weight_diff is None:
         solved_ticket_weight_diff = 'Err'
 
+    log.info(f"Minimum solved ticket weight diff: {min_solved_ticket_weight_diff}", extra={"min_solved_ticket_weight_diff": min_solved_ticket_weight_diff})
+
     try:
         return int(min_solved_ticket_weight_diff)
     except:
@@ -280,19 +263,15 @@ def get_productivity():
 def resolve_and_check_connectivity(hostname):
     while True:
         try:
-            # 名前解決を試みる
             ip_address = socket.gethostbyname(hostname)
             log.debug(f"{hostname} resolved to {ip_address}")
-            # ポート443への接続を試みる
             with socket.create_connection((ip_address, 443), timeout=5) as sock:
                 log.debug(f"Successfully connected to {hostname} on port 443")
-                break  # 接続が成功したらループを抜ける
+                break
         except socket.gaierror:
-            # 名前解決に失敗した場合
             log.debug(f"Failed to resolve {hostname}. Retrying in 5 seconds...")
             time.sleep(5)
         except (socket.timeout, socket.error):
-            # 接続に失敗した場合
             log.debug(f"Failed to connect to {hostname} on port 443. Retrying in 5 seconds...")
             time.sleep(5)
 

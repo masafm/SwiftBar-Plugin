@@ -29,6 +29,30 @@ HOME_THRESHOLD = 20
 ADDR = ['154.18.*', '209.249.*']
 KEYCHAIN_SERVICE = 'swiftbar'
 
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        ts = time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime(record.created))
+        log_entry = {
+            'timestamp': f'{ts}.{int(record.msecs):03d}Z',
+            'status': record.levelname.lower(),
+            'message': record.getMessage(),
+            'logger': record.name,
+            'file': f'{record.filename}:{record.lineno}',
+        }
+        for key in ['dd.service', 'dd.env', 'dd.version', 'dd.trace_id', 'dd.span_id']:
+            if record.__dict__.get(key):
+                log_entry[key] = str(record.__dict__[key])
+        skip = {'message', 'asctime', 'args', 'created', 'exc_info', 'exc_text', 'filename',
+                'funcName', 'levelname', 'levelno', 'lineno', 'module', 'msecs', 'msg',
+                'name', 'pathname', 'process', 'processName', 'relativeCreated',
+                'stack_info', 'thread', 'threadName', 'taskName'}
+        for key, val in record.__dict__.items():
+            if key not in skip and not key.startswith('dd.'):
+                log_entry[key] = val
+        if record.exc_info:
+            log_entry['error.stack'] = self.formatException(record.exc_info)
+        return json.dumps(log_entry, ensure_ascii=False, default=str)
+
 class TCPSocketHandler(logging.Handler):
     def __init__(self, host, port):
         super().__init__()
@@ -60,7 +84,7 @@ def get_logger():
     logging.getLogger().handlers[0].setLevel(logging.CRITICAL)
     log = logging.getLogger(__name__)
     tcp_handler = TCPSocketHandler("localhost", 10518)
-    tcp_handler.setFormatter((UTCFormatter(FORMAT)))
+    tcp_handler.setFormatter(JSONFormatter())
     log.addHandler(tcp_handler)
     return log
 
@@ -105,7 +129,7 @@ def get_pip():
     try:
         pip = requests.get("https://checkip.amazonaws.com").text.strip()
     except Exception as e:
-        log.error(f"Exception: {e}", stack_info=True)
+        log.error("Failed to fetch public IP address", exc_info=True)
 
     return pip
 
@@ -127,26 +151,26 @@ def get_home_office_ratio():
     data = {
         "series": [
             {
-             "metric": "work",
-             "type": 1,
-             "points": [
-                 {
-                  "timestamp": cur_timestamp,
-                  "value": 1
-                  }
-                  ],
-             "tags": [
-                 f"pip:{pip}"
-                 ]
-                 }
-                 ]
-                 }
+                "metric": "work",
+                "type": 1,
+                "points": [
+                    {
+                        "timestamp": cur_timestamp,
+                        "value": 1
+                    }
+                ],
+                "tags": [
+                    f"pip:{pip}"
+                ]
+            }
+        ]
+    }
 
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
         "DD-API-KEY": dd_api_key
-        }
+    }
 
     today = d.date.today()
     # 曜日を取得 (月曜日が0、日曜日が6)
@@ -162,8 +186,7 @@ def get_home_office_ratio():
         from_timestamp = int(first_day_of_month.timestamp())
         last_day_of_month = (first_day_of_month + timedelta(days=32)).replace(day=1) - timedelta(days=1)
         to_timestamp = int(last_day_of_month.timestamp())
-        log.debug(f"from: {from_timestamp}")
-        log.debug(f"to: {to_timestamp}")
+        log.debug(f"Querying metrics for {first_day_of_month.strftime('%Y-%m-%d')} to {last_day_of_month.strftime('%Y-%m-%d')}")
 
         # Define queries
         query_office = "count_not_null(sum:work{"+ip+"}.as_count().rollup(daily, 'Asia/Tokyo'))"
@@ -179,9 +202,9 @@ def get_home_office_ratio():
                 "Accept": "application/json",
                 "DD-API-KEY": dd_api_key,
                 "DD-APPLICATION-KEY": dd_app_key
-                }
-                ).json()
-        log.debug("response_office: "+str(response_office))
+            }
+        ).json()
+        log.debug("Fetched office days from Datadog", extra={"response_office": response_office})
 
         # Query Datadog API for home days
         response_home = requests.get(
@@ -190,9 +213,9 @@ def get_home_office_ratio():
                 "Accept": "application/json",
                 "DD-API-KEY": dd_api_key,
                 "DD-APPLICATION-KEY": dd_app_key
-                }
-                ).json()
-        log.debug("response_home: "+str(response_home))
+            }
+        ).json()
+        log.debug("Fetched home days from Datadog", extra={"response_home": response_home})
 
         days_home = 0
         days_office = 0
@@ -211,7 +234,7 @@ def get_home_office_ratio():
                         if office_timestamp == home_timestamp:
                             if office_value > 0 and home_value > 0:
                                 days_home -= 1
-                                log.debug(f"{home_timestamp}: --")
+                                log.debug("Same-day overlap detected: counted as office only", extra={"timestamp_ms": home_timestamp})
                             break
 
                 if office_value > 0:
@@ -225,8 +248,7 @@ def get_home_office_ratio():
                 if home_value > 0:
                     days_home += 1
 
-        log.debug(f"Days office: {days_office}")
-        log.debug(f"Days home (adjusted): {days_home}")
+        log.debug(f"Day counts: {days_office} office, {days_home} home", extra={"days_office": days_office, "days_home": days_home})
 
         ratio = 0
         # Calculate ratio
@@ -234,29 +256,29 @@ def get_home_office_ratio():
             ratio = 100
         else:
             ratio = round(days_office / (days_home + days_office) * 100, 1)
-            log.debug(f"Ratio: {ratio}")
+            log.info(f"Office ratio this month: {ratio}%", extra={"ratio": ratio, "days_office": days_office, "days_home": days_home})
 
             # Post ratio data to Datadog API
             data = {
                 "series": [
                     {
-                     "metric": "office_percent",
-                     "type": 3,
-                     "points": [
-                         {
-                          "timestamp": cur_timestamp,
-                          "value": ratio
-                          }
-                          ]
-                          }
-                          ]
-                          }
+                        "metric": "office_percent",
+                        "type": 3,
+                        "points": [
+                            {
+                                "timestamp": cur_timestamp,
+                                "value": ratio
+                            }
+                        ]
+                    }
+                ]
+            }
 
             response = requests.post("https://api.datadoghq.com/api/v2/series", headers=headers, json=data)
 
     except Exception as e:
-        log.error(f"Exception: {e}", stack_info=True)
-        
+        log.error("Failed to calculate home/office ratio", exc_info=True)
+
     return ratio
 
 def resolve_and_check_connectivity(hostname):
